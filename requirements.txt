@@ -1,0 +1,2 @@
+SQLAlchemy~=2.0.41
+python-telegram-bot~=22.2
