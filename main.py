@@ -53,7 +53,6 @@ async def old_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def show_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Устанавливаем состояние
     context.user_data['state'] = STATE_AWAITING_ACTION
 
     words = db.trainer(update.effective_user.id)
