@@ -1,5 +1,6 @@
 import random
-
+import os
+from dotenv import load_dotenv
 from sqlalchemy import create_engine, ForeignKey
 from sqlalchemy.orm import Session, DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -56,12 +57,48 @@ class GeneralDictionaryUser(Base):
                                                                    back_populates="dictionary_users")
 
 
+load_dotenv()
+
+
 class DB:
     def __init__(self):
-        self.engine = create_engine('postgresql://postgres:admin@localhost:5432/postgres')
+        db_user = os.getenv("DB_USER")
+        db_password = os.getenv("DB_PASSWORD")
+        db_host = os.getenv("DB_HOST")
+        db_port = os.getenv("DB_PORT")
+        db_name = os.getenv("DB_NAME")
+
+        if not all([db_user, db_password, db_host, db_port, db_name]):
+            raise ValueError("One or more database parameters are not set in environment variables")
+        self.engine = create_engine(f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}")
 
     def session(self) -> Session:
         return Session(self.engine)
+
+    def populate_general_dictionary(self):
+        predefined_words = [
+            {"en_word": "apple", "ru_word": "яблоко"},
+            {"en_word": "dog", "ru_word": "собака"},
+            {"en_word": "cat", "ru_word": "кошка"},
+            {"en_word": "house", "ru_word": "дом"},
+            {"en_word": "car", "ru_word": "машина"},
+            {"en_word": "book", "ru_word": "книга"},
+            {"en_word": "sun", "ru_word": "солнце"},
+            {"en_word": "moon", "ru_word": "луна"},
+            {"en_word": "water", "ru_word": "вода"},
+            {"en_word": "tree", "ru_word": "дерево"},
+            {"en_word": "flower", "ru_word": "цветок"},
+            {"en_word": "computer", "ru_word": "компьютер"}
+        ]
+
+        with self.session() as session:
+            if not session.query(GeneralDictionary).first():
+                words_to_add = [GeneralDictionary(**word) for word in predefined_words]
+                session.add_all(words_to_add)
+                session.commit()
+                print("Таблица general_dictionary заполнена предопределёнными данными.")
+            else:
+                print("Таблица general_dictionary уже содержит данные.")
 
     def get_user(self, user_id: int) -> User.telegram_id:
         with self.session() as session:
@@ -82,11 +119,12 @@ class DB:
                 personal_words = session.query(PersonDictionary).filter(PersonDictionary.user_id == user.id).all()
                 for p in personal_words:
                     result_dict[p.en_word] = [p.ru_word]
-                general_words = session.query(GeneralDictionary).all()
-                for g in general_words:
-                    result_dict[g.en_word] = [g.ru_word]
+            general_words = session.query(GeneralDictionary).all()
+            for g in general_words:
+                result_dict[g.en_word] = [g.ru_word]
+
         word_pairs = list(result_dict.items())
-        count = min(4, len(word_pairs)) if word_pairs else 0
+        count = min(4, len(word_pairs))
         return random.sample(word_pairs, count) if count > 0 else []
 
     def add_personal_word(self, telegram_id: int, en_word: str, ru_word: str) -> bool:

@@ -1,10 +1,15 @@
 import random
 import re
-
+import os
+from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler, MessageHandler, filters
-
 from db import DB
+
+load_dotenv()
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+if TELEGRAM_BOT_TOKEN is None:
+    raise ValueError("Telegram Bot Token is not set in the environment variables")
 
 db = DB()
 
@@ -56,19 +61,25 @@ async def show_words(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['state'] = STATE_AWAITING_ACTION
 
     words = db.trainer(update.effective_user.id)
-    if not words:
+
+    if not words or len(words) == 0:
         keyboard = [['Добавить слово', 'Мой словарь']]
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
-        await send_message(update, "У вас пока нет слов для тренировки. Добавьте новые слова в словарь.",
-                           reply_markup=reply_markup)
+        await send_message(
+            update,
+            "У вас пока нет слов для тренировки. Добавьте новые слова в словарь.",
+            reply_markup=reply_markup
+        )
         return
 
     keyword = [[word[0] for word in words],
                ['Добавить слово', 'Удалить слово', 'Мой словарь', 'Дальше']]
     random.shuffle(keyword[0])
-    ru_words = words[0][1]
 
-    context.user_data['current_word'] = words[0][0]
+    first_word = words[0]
+    en_word, ru_words = first_word[0], first_word[1]
+
+    context.user_data['current_word'] = en_word
     context.user_data['current_translation'] = "".join(ru_words)
     context.user_data['all_words'] = words
 
@@ -269,7 +280,8 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def main():
-    app = ApplicationBuilder().token("token").build()
+    db.populate_general_dictionary()
+    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(handle_callback))
