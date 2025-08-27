@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine, ForeignKey
 from sqlalchemy.orm import Session, DeclarativeBase, Mapped, mapped_column, relationship
 
+load_dotenv("config.env")
+
 
 class Base(DeclarativeBase):
     pass
@@ -55,9 +57,6 @@ class GeneralDictionaryUser(Base):
         primary_key=True)
     general_dictionaries: Mapped[GeneralDictionary] = relationship(GeneralDictionary,
                                                                    back_populates="dictionary_users")
-
-
-load_dotenv()
 
 
 class DB:

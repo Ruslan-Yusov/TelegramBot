@@ -6,10 +6,12 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKe
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler, MessageHandler, filters
 from db import DB
 
-load_dotenv()
+load_dotenv("config.env")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-if TELEGRAM_BOT_TOKEN is None:
-    raise ValueError("Telegram Bot Token is not set in the environment variables")
+if not TELEGRAM_BOT_TOKEN:
+    print("⚠️ Error: Telegram Bot Token is not set in the environment variables. Please check your .env file.")
+    exit(1)
+
 
 db = DB()
 
